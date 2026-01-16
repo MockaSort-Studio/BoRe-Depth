@@ -1,19 +1,15 @@
-import numpy as np
 import math
+from functools import partial
 
+import numpy as np
 import torch
-
+from einops import rearrange
+from mmcv.cnn import build_norm_layer
+from mmcv.runner import load_checkpoint
 from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.layers import DropPath, trunc_normal_
-
-from einops import rearrange
-from functools import partial
-from torch import nn, einsum
+from torch import einsum, nn
 from torch.nn.modules.batchnorm import _BatchNorm
-
-from mmcv.runner import load_checkpoint, load_state_dict
-from mmcv.cnn import build_norm_layer
-
 
 __all__ = [
     "mpvit_tiny",
@@ -43,12 +39,12 @@ class Mlp(nn.Module):
     """Feed-forward network (FFN, a.k.a. MLP) class."""
 
     def __init__(
-            self,
-            in_features,
-            hidden_features=None,
-            out_features=None,
-            act_layer=nn.GELU,
-            drop=0.0,
+        self,
+        in_features,
+        hidden_features=None,
+        out_features=None,
+        act_layer=nn.GELU,
+        drop=0.0,
     ):
         super().__init__()
         out_features = out_features or in_features
@@ -69,17 +65,17 @@ class Mlp(nn.Module):
 
 class Conv2d_BN(nn.Module):
     def __init__(
-            self,
-            in_ch,
-            out_ch,
-            kernel_size=1,
-            stride=1,
-            pad=0,
-            dilation=1,
-            groups=1,
-            bn_weight_init=1,
-            act_layer=None,
-            norm_cfg=dict(type="BN"),
+        self,
+        in_ch,
+        out_ch,
+        kernel_size=1,
+        stride=1,
+        pad=0,
+        dilation=1,
+        groups=1,
+        bn_weight_init=1,
+        act_layer=None,
+        norm_cfg=dict(type="BN"),
     ):
         super().__init__()
         # self.add_module('c', torch.nn.Conv2d(
@@ -113,15 +109,15 @@ class DWConv2d_BN(nn.Module):
     """
 
     def __init__(
-            self,
-            in_ch,
-            out_ch,
-            kernel_size=1,
-            stride=1,
-            norm_layer=nn.BatchNorm2d,
-            act_layer=nn.Hardswish,
-            bn_weight_init=1,
-            norm_cfg=dict(type="BN"),
+        self,
+        in_ch,
+        out_ch,
+        kernel_size=1,
+        stride=1,
+        norm_layer=nn.BatchNorm2d,
+        act_layer=nn.Hardswish,
+        bn_weight_init=1,
+        norm_cfg=dict(type="BN"),
     ):
         super().__init__()
 
@@ -151,7 +147,6 @@ class DWConv2d_BN(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, x):
-
         x = self.dwconv(x)
         x = self.pwconv(x)
         x = self.bn(x)
@@ -167,14 +162,14 @@ class DWCPatchEmbed(nn.Module):
     """
 
     def __init__(
-            self,
-            in_chans=3,
-            embed_dim=768,
-            patch_size=16,
-            stride=1,
-            pad=0,
-            act_layer=nn.Hardswish,
-            norm_cfg=dict(type="BN"),
+        self,
+        in_chans=3,
+        embed_dim=768,
+        patch_size=16,
+        stride=1,
+        pad=0,
+        act_layer=nn.Hardswish,
+        norm_cfg=dict(type="BN"),
     ):
         super().__init__()
 
@@ -277,8 +272,7 @@ class ConvRelPosEnc(nn.Module):
         self.head_splits = []
         for cur_window, cur_head_split in window.items():
             dilation = 1  # Use dilation=1 at default.
-            padding_size = (cur_window + (cur_window - 1) *
-                            (dilation - 1)) // 2
+            padding_size = (cur_window + (cur_window - 1) * (dilation - 1)) // 2
             cur_conv = nn.Conv2d(
                 cur_head_split * Ch,
                 cur_head_split * Ch,
@@ -304,9 +298,7 @@ class ConvRelPosEnc(nn.Module):
         v_img = rearrange(v_img, "B h (H W) Ch -> B (h Ch) H W", H=H, W=W)
         # Split according to channels.
         v_img_list = torch.split(v_img, self.channel_splits, dim=1)
-        conv_v_img_list = [
-            conv(x) for conv, x in zip(self.conv_list, v_img_list)
-        ]
+        conv_v_img_list = [conv(x) for conv, x in zip(self.conv_list, v_img_list)]
         conv_v_img = torch.cat(conv_v_img_list, dim=1)
         # Shape: [B, h*Ch, H, W] -> [B, h, H*W, Ch].
         conv_v_img = rearrange(conv_v_img, "B (h Ch) H W -> B h (H W) Ch", h=h)
@@ -320,19 +312,19 @@ class FactorAtt_ConvRelPosEnc(nn.Module):
     """Factorized attention with convolutional relative position encoding class."""
 
     def __init__(
-            self,
-            dim,
-            num_heads=8,
-            qkv_bias=False,
-            qk_scale=None,
-            attn_drop=0.0,
-            proj_drop=0.0,
-            shared_crpe=None,
+        self,
+        dim,
+        num_heads=8,
+        qkv_bias=False,
+        qk_scale=None,
+        attn_drop=0.0,
+        proj_drop=0.0,
+        shared_crpe=None,
     ):
         super().__init__()
         self.num_heads = num_heads
         head_dim = dim // num_heads
-        self.scale = qk_scale or head_dim ** -0.5
+        self.scale = qk_scale or head_dim**-0.5
 
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)  # Note: attn_drop is actually not used.
@@ -381,16 +373,16 @@ class FactorAtt_ConvRelPosEnc(nn.Module):
 
 class MHCABlock(nn.Module):
     def __init__(
-            self,
-            dim,
-            num_heads,
-            mlp_ratio=3,
-            drop_path=0.0,
-            qkv_bias=True,
-            qk_scale=None,
-            norm_layer=partial(nn.LayerNorm, eps=1e-6),
-            shared_cpe=None,
-            shared_crpe=None,
+        self,
+        dim,
+        num_heads,
+        mlp_ratio=3,
+        drop_path=0.0,
+        qkv_bias=True,
+        qk_scale=None,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        shared_cpe=None,
+        shared_crpe=None,
     ):
         super().__init__()
 
@@ -424,14 +416,14 @@ class MHCABlock(nn.Module):
 
 class MHCAEncoder(nn.Module):
     def __init__(
-            self,
-            dim,
-            num_layers=1,
-            num_heads=8,
-            mlp_ratio=3,
-            drop_path_list=[],
-            qk_scale=None,
-            crpe_window={3: 2, 5: 3, 7: 3},
+        self,
+        dim,
+        num_layers=1,
+        num_heads=8,
+        mlp_ratio=3,
+        drop_path_list=[],
+        qk_scale=None,
+        crpe_window={3: 2, 5: 3, 7: 3},
     ):
         super().__init__()
 
@@ -467,12 +459,12 @@ class MHCAEncoder(nn.Module):
 
 class ResBlock(nn.Module):
     def __init__(
-            self,
-            in_features,
-            hidden_features=None,
-            out_features=None,
-            act_layer=nn.Hardswish,
-            norm_cfg=dict(type="BN"),
+        self,
+        in_features,
+        hidden_features=None,
+        out_features=None,
+        act_layer=nn.Hardswish,
+        norm_cfg=dict(type="BN"),
     ):
         super().__init__()
 
@@ -520,15 +512,15 @@ class ResBlock(nn.Module):
 
 class MHCA_stage(nn.Module):
     def __init__(
-            self,
-            embed_dim,
-            out_embed_dim,
-            num_layers=1,
-            num_heads=8,
-            mlp_ratio=3,
-            num_path=4,
-            norm_cfg=dict(type="BN"),
-            drop_path_list=[],
+        self,
+        embed_dim,
+        out_embed_dim,
+        num_layers=1,
+        num_heads=8,
+        mlp_ratio=3,
+        num_path=4,
+        norm_cfg=dict(type="BN"),
+        drop_path_list=[],
     ):
         super().__init__()
 
@@ -577,7 +569,7 @@ def dpr_generator(drop_path_rate, num_layers, num_stages):
     dpr = []
     cur = 0
     for i in range(num_stages):
-        dpr_per_stage = dpr_list[cur: cur + num_layers[i]]
+        dpr_per_stage = dpr_list[cur : cur + num_layers[i]]
         dpr.append(dpr_per_stage)
         cur += num_layers[i]
 
@@ -588,19 +580,19 @@ class MPViT(nn.Module):
     """Multi-Path ViT class."""
 
     def __init__(
-            self,
-            num_classes=80,
-            in_chans=3,
-            num_stages=4,
-            num_layers=[1, 1, 1, 1],
-            mlp_ratios=[8, 8, 4, 4],
-            num_path=[4, 4, 4, 4],
-            embed_dims=[64, 128, 256, 512],
-            num_heads=[8, 8, 8, 8],
-            drop_path_rate=0.2,
-            norm_cfg=dict(type="BN"),
-            norm_eval=False,
-            pretrained=None,
+        self,
+        num_classes=80,
+        in_chans=3,
+        num_stages=4,
+        num_layers=[1, 1, 1, 1],
+        mlp_ratios=[8, 8, 4, 4],
+        num_path=[4, 4, 4, 4],
+        embed_dims=[64, 128, 256, 512],
+        num_heads=[8, 8, 8, 8],
+        drop_path_rate=0.2,
+        norm_cfg=dict(type="BN"),
+        norm_eval=False,
+        pretrained=None,
     ):
         super().__init__()
 
@@ -690,7 +682,6 @@ class MPViT(nn.Module):
             raise TypeError("pretrained must be a str or None")
 
     def forward_features(self, x):
-
         # x's shape : [B, C, H, W]
         outs = []
         x = self.stem(x)  # Shape : [B, C, H/4, W/4]

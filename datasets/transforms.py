@@ -40,6 +40,7 @@ class ArrayToTensor(object):
     Converts a list of numpy.ndarray (H x W x C) along with a intrinsics matrix to
     a list of torch.FloatTensor of shape (C x H x W) with a intrinsics tensor.
     """
+
     def __call__(self, images, intrinsics):
         tensors = []
         for im in images:
@@ -49,7 +50,7 @@ class ArrayToTensor(object):
                 tensors.append(torch.from_numpy(im).float())
             else:
                 im = np.transpose(im, (2, 0, 1))
-                tensors.append(torch.from_numpy(im).float()/255)
+                tensors.append(torch.from_numpy(im).float() / 255)
         return tensors, intrinsics
 
 
@@ -90,16 +91,28 @@ class RandomScaleCrop(object):
         scaled_images = []
         for im in images:
             if im.ndim < 3:  # depth
-                scaled_images.append(cv2.resize(im, dsize=(
-                    scaled_w, scaled_h), fx=1.0, fy=1.0, interpolation=cv2.INTER_NEAREST))
+                scaled_images.append(
+                    cv2.resize(
+                        im,
+                        dsize=(scaled_w, scaled_h),
+                        fx=1.0,
+                        fy=1.0,
+                        interpolation=cv2.INTER_NEAREST,
+                    )
+                )
             else:
-                scaled_images.append(cv2.resize(im, dsize=(
-                    scaled_w, scaled_h), interpolation=cv2.INTER_LINEAR))
+                scaled_images.append(
+                    cv2.resize(
+                        im, dsize=(scaled_w, scaled_h), interpolation=cv2.INTER_LINEAR
+                    )
+                )
 
         offset_y = np.random.randint(scaled_h - in_h + 1)
         offset_x = np.random.randint(scaled_w - in_w + 1)
-        cropped_images = [im[offset_y:offset_y + in_h,
-                             offset_x:offset_x + in_w] for im in scaled_images]
+        cropped_images = [
+            im[offset_y : offset_y + in_h, offset_x : offset_x + in_w]
+            for im in scaled_images
+        ]
 
         output_intrinsics[0, 2] -= offset_x
         output_intrinsics[1, 2] -= offset_y
@@ -116,27 +129,35 @@ class RescaleTo(object):
         self.output_size = output_size
 
     def __call__(self, images, intrinsics):
-
         in_h, in_w, _ = images[0].shape
         out_h, out_w = self.output_size[0], self.output_size[1]
 
         if in_h != out_h or in_w != out_w:
-
             scaled_images = []
             for im in images:
                 if im.ndim < 3:  # depth
-                    scaled_images.append(cv2.resize(im, dsize=(
-                        out_w, out_h), fx=1.0, fy=1.0, interpolation=cv2.INTER_NEAREST))
+                    scaled_images.append(
+                        cv2.resize(
+                            im,
+                            dsize=(out_w, out_h),
+                            fx=1.0,
+                            fy=1.0,
+                            interpolation=cv2.INTER_NEAREST,
+                        )
+                    )
                 else:
-                    scaled_images.append(cv2.resize(im, dsize=(
-                        out_w, out_h), interpolation=cv2.INTER_LINEAR))
+                    scaled_images.append(
+                        cv2.resize(
+                            im, dsize=(out_w, out_h), interpolation=cv2.INTER_LINEAR
+                        )
+                    )
         else:
             scaled_images = images
 
         if intrinsics is not None:
             output_intrinsics = np.copy(intrinsics)
-            output_intrinsics[0] *= (out_w * 1.0 / in_w)
-            output_intrinsics[1] *= (out_h * 1.0 / in_h)
+            output_intrinsics[0] *= out_w * 1.0 / in_w
+            output_intrinsics[1] *= out_h * 1.0 / in_h
         else:
             output_intrinsics = None
 

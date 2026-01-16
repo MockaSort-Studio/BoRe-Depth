@@ -1,13 +1,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .MPViT_encoder import mpvit_tiny
+
+# from mpvit import mpvit_tiny --- IGNORE ---
 
 
 class ConvBlock(nn.Module):
     """
     Layer to perform a convolution followed by ELU
     """
+
     def __init__(self, in_channels, out_channels):
         super(ConvBlock, self).__init__()
 
@@ -24,6 +26,7 @@ class Conv3x3(nn.Module):
     """
     Layer to pad and convolve input
     """
+
     def __init__(self, in_channels, out_channels, use_refl=True):
         super(Conv3x3, self).__init__()
 
@@ -57,8 +60,7 @@ class Conv1x1Block(nn.Module):
 
 
 def upsample(x):
-    """Upsample input tensor by a factor of 2
-    """
+    """Upsample input tensor by a factor of 2"""
     return F.interpolate(x, scale_factor=2, mode="bilinear", align_corners=False)
 
 
@@ -66,10 +68,16 @@ class DeconvNet(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(DeconvNet, self).__init__()
         self.deconv_block = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=in_channels, out_channels=in_channels, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(
+                in_channels=in_channels,
+                out_channels=in_channels,
+                kernel_size=4,
+                stride=2,
+                padding=1,
+            ),
             nn.BatchNorm2d(in_channels),
             nn.ELU(inplace=True),
-            nn.Conv2d(in_channels, out_channels, 1)
+            nn.Conv2d(in_channels, out_channels, 1),
         )
 
     def forward(self, x):
@@ -82,7 +90,7 @@ class LocalAttention(nn.Module):
         hidden_dim = int(dim * growth_rate)
         self.conv_0 = nn.Sequential(
             nn.Conv2d(dim, hidden_dim, 3, 1, 1, groups=dim),
-            nn.Conv2d(hidden_dim, hidden_dim, 1, 1, 0)
+            nn.Conv2d(hidden_dim, hidden_dim, 1, 1, 0),
         )
         self.act = nn.GELU()
         self.conv_1 = nn.Conv2d(hidden_dim, dim, 1, 1, 0)
@@ -96,7 +104,9 @@ class LocalAttention(nn.Module):
 
 
 class DepthDecoder(nn.Module):
-    def __init__(self, num_ch_enc, scales=range(4), num_output_channels=1, use_skips=True):
+    def __init__(
+        self, num_ch_enc, scales=range(4), num_output_channels=1, use_skips=True
+    ):
         super(DepthDecoder, self).__init__()
 
         self.alpha = 10
@@ -137,8 +147,7 @@ class DepthDecoder(nn.Module):
             num_ch_out = self.num_ch_dec[i]
             self.upconvs3.append(ConvBlock(num_ch_in, num_ch_out))
 
-        self.dispconvs.append(
-            Conv3x3(self.num_ch_dec[0], self.num_output_channels))
+        self.dispconvs.append(Conv3x3(self.num_ch_dec[0], self.num_output_channels))
 
         self.globalattentions = nn.ModuleList(self.globalattentions)
         self.deconvs = nn.ModuleList(self.deconvs)
@@ -151,7 +160,6 @@ class DepthDecoder(nn.Module):
         return
 
     def forward(self, input_features):
-
         self.outputs = []
 
         # decoder
@@ -177,10 +185,9 @@ class DepthDecoder(nn.Module):
 
 
 class DepthNet(nn.Module):
-
     def __init__(self):
         super(DepthNet, self).__init__()
-        self.encoder = mpvit_tiny()
+        # self.encoder = mpvit_tiny()
         self.num_ch_enc = [64, 96, 176, 216, 216]  # mpvit_tiny
         self.decoder = DepthDecoder(self.num_ch_enc)
 
@@ -188,8 +195,7 @@ class DepthNet(nn.Module):
         pass
 
     def forward(self, x):
-
-        features = self.encoder(x)
-        outputs = self.decoder(features)
-
-        return outputs[0]
+        # features = self.encoder(x)
+        # outputs = self.decoder(features)
+        return x
+        # return outputs[0]

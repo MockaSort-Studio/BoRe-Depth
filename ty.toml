@@ -3,5 +3,5 @@ respect-ignore-files = true
 exclude = [".venv/"]
 
 [environment]
-extra-paths = ["./loss_vegas"]
+extra-paths = ["./loss_vegas", "./models"]
 root = ["./"]

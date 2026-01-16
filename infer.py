@@ -29,14 +29,14 @@ def main():
     if hparams.save_vis or hparams.save_depth:
         output_dir.makedirs_p()
 
-    image_files = sum([(input_dir).files('*.{}'.format(ext))
-                      for ext in ['jpg', 'png']], [])
+    image_files = sum(
+        [(input_dir).files("*.{}".format(ext)) for ext in ["jpg", "png"]], []
+    )
     image_files = sorted(image_files)
 
-    print('{} images for inference'.format(len(image_files)))
+    print("{} images for inference".format(len(image_files)))
 
     for i, img_file in enumerate(tqdm(image_files)):
-
         filename = os.path.splitext(os.path.basename(img_file))[0]
 
         img = imread(img_file).astype(np.float32)
@@ -44,15 +44,13 @@ def main():
         pred_depth = model(tensor_img)
 
         if hparams.save_vis:
-            vis = visualize_depth(pred_depth[0, 0]).permute(
-                1, 2, 0).numpy() * 255
-            imwrite(output_dir/'{}.jpg'.format(filename),
-                    vis.astype(np.uint8))
+            vis = visualize_depth(pred_depth[0, 0]).permute(1, 2, 0).numpy() * 255
+            imwrite(output_dir / "{}.jpg".format(filename), vis.astype(np.uint8))
 
         if hparams.save_depth:
             depth = pred_depth[0, 0].cpu().numpy()
-            np.save(output_dir/'{}.npy'.format(filename), depth)
+            np.save(output_dir / "{}.npy".format(filename), depth)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

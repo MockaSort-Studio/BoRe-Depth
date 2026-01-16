@@ -8,8 +8,4 @@ hparams = get_opts()
 size = get_size(hparams.dataset_name)
 
 # inference_normalization
-inference_transform = Compose([
-    RescaleTo(size),
-    ArrayToTensor(),
-    Normalize()]
-)
+inference_transform = Compose([RescaleTo(size), ArrayToTensor(), Normalize()])

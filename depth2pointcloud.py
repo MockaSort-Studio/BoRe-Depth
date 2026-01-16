@@ -56,8 +56,13 @@ rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
 fx, fy, cx, cy = 559.62, 558.14, 361.87, 241.99
 
 
-if depth_image.shape[0] != rgb_image.shape[0] or depth_image.shape[1] != rgb_image.shape[1]:
-    depth_map = resize(depth_image, (rgb_image.shape[0], rgb_image.shape[1]), anti_aliasing=True)
+if (
+    depth_image.shape[0] != rgb_image.shape[0]
+    or depth_image.shape[1] != rgb_image.shape[1]
+):
+    depth_map = resize(
+        depth_image, (rgb_image.shape[0], rgb_image.shape[1]), anti_aliasing=True
+    )
 
 # remove invalid pixels
 y1, y2, x1, x2 = 10, 471, 10, 630
