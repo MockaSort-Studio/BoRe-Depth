@@ -8,7 +8,7 @@ class Trainer:
     def __init__(
         self,
         model: nn.Module,
-        optimizer: optim.Optimizer = None,
+        optimizer: optim.Optimizer,
         data_loader: data.DataLoader = None,
     ) -> None:
         self.fabric = Fabric()
@@ -16,7 +16,8 @@ class Trainer:
             raise NotImplementedError("Distributed training is not supported yet.")
         print("Setting up model...")
         self.model = self.fabric.setup_module(model)
-        # self.optimizer = self.fabric.setup_optimizers(optimizer)
+        print("Setting up optimizer...")
+        self.optimizer = self.fabric.setup_optimizers(optimizer)
         # self.data_loader = self.fabric.setup_dataloaders(data_loader)
 
     def train(self) -> None:
