@@ -20,18 +20,6 @@
             "path": "/bin/zsh"
         }
     },
-    "[dockercompose]": {
-        "editor.autoIndent": "advanced",
-        "editor.defaultFormatter": "redhat.vscode-yaml",
-        "editor.formatOnSave": true,
-        "editor.insertSpaces": true,
-        "editor.quickSuggestions": {
-            "other": true,
-            "comments": false,
-            "strings": true
-        },
-        "editor.tabSize": 4
-    },
     "[dockerfile]": {
         "editor.formatOnSave": true
     },

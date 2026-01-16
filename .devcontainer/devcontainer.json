@@ -50,7 +50,10 @@
         "UV_PROJECT_ENVIRONMENT": "${containerWorkspaceFolder}/.venv"
     },
     "runArgs": [
-        "--network=host"
+        "--network=host",
+        "--runtime=nvidia",
+        "--gpus",
+        "all"
     ],
     "updateContentCommand": "sudo chown -R vscode /workspaces",
     "postCreateCommand": "uv sync --frozen"

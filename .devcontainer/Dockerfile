@@ -29,3 +29,6 @@ RUN ssh-keyscan -t ecdsa github.com >> .ssh/known_hosts
 COPY --from=uv --chown=vscode: /uv /uvx /bin/
 
 RUN git lfs install
+
+
+
