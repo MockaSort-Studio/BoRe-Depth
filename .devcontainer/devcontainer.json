@@ -16,10 +16,18 @@
             ]
         }
     },
-    "initializeCommand": "mkdir -p ${localEnv:HOME}/.cache && chmod 777 ${localEnv:HOME}/.cache",
+   "initializeCommand": "mkdir -p ${localEnv:HOME}/.cache && chmod 777 ${localEnv:HOME}/.cache",
    "mounts": [
-        "source=/media/mike/Wormhole/Datasets,target=/home/vscode/datasets,type=bind",
-        "source=${localEnv:HOME}${localEnv:USERPROFILE}/.cache,target=/home/vscode/.cache,type=bind"
+        {
+            "source": "/media/mike/Wormhole/Datasets",
+            "target": "/home/vscode/datasets",
+            "type": "bind"
+        },
+        {
+            "source": "${localEnv:HOME}${localEnv:USERPROFILE}/.cache",
+            "target": "/home/vscode/.cache",
+            "type": "bind"
+        }
     ],
     "containerEnv": {
         "DISPLAY": "${localEnv:DISPLAY}"
