@@ -21,6 +21,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = [
-    "ruff>=0.14.13",
-]
+dev = ["ruff>=0.14.13"]
+
+[tool.uv.sources]
+loss_vegas = { path = "./loss_vegas" }
